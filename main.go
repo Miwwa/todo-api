@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/healthcheck"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/joho/godotenv"
 	"log"
 	"os"
 	"os/signal"
@@ -22,7 +23,12 @@ const (
 )
 
 func main() {
-	appConfig := config.Default()
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+	appConfig := config.FromEnv()
+	log.Printf("config loaded:\n%s\n", appConfig.DebugString())
 
 	app := setupApp()
 	startWithGracefulShutdown(app, appConfig)

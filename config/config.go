@@ -1,18 +1,22 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"strconv"
+)
 
 type AppConfig struct {
 	port        int
 	environment string
-	isDev       bool
+	isProd      bool
 }
 
 func Default() AppConfig {
 	return AppConfig{
 		port:        3000,
 		environment: "development",
-		isDev:       true,
+		isProd:      true,
 	}
 }
 
@@ -25,11 +29,28 @@ func (c *AppConfig) Address() string {
 }
 
 func (c *AppConfig) IsDev() bool {
-	return c.isDev
+	return !c.isProd
 }
 
 func (c *AppConfig) IsProd() bool {
-	return !c.isDev
+	return c.isProd
 }
 
-// todo: read config from dotenv
+func (c *AppConfig) DebugString() string {
+	return fmt.Sprintf("port:%d\nenvironment:%s\nisDev:%t\nisProd:%t", c.port, c.environment, c.IsDev(), c.IsProd())
+}
+
+func FromEnv() AppConfig {
+	port, err := strconv.Atoi(os.Getenv("PORT"))
+	if err != nil {
+		port = 3000
+	}
+
+	env := os.Getenv("ENV")
+
+	return AppConfig{
+		port:        port,
+		environment: env,
+		isProd:      env == "production",
+	}
+}

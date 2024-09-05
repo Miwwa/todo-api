@@ -1,17 +1,20 @@
 package main
 
 import (
+	"database/sql"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/healthcheck"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/joho/godotenv"
+	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 	"todo-api/config"
+	"todo-api/users"
 	"todo-api/utils"
 )
 
@@ -30,11 +33,16 @@ func main() {
 	appConfig := config.FromEnv()
 	log.Printf("config loaded:\n%s\n", appConfig.DebugString())
 
-	app := setupApp()
-	startWithGracefulShutdown(app, appConfig)
+	db, err := sql.Open("sqlite3", appConfig.DbConnectionString())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	app := setupApp(db)
+	startWithGracefulShutdown(app, db, appConfig)
 }
 
-func setupApp() *fiber.App {
+func setupApp(db *sql.DB) *fiber.App {
 	app := fiber.New(fiber.Config{
 		IdleTimeout:  idleTimeout,
 		ReadTimeout:  readTimeout,
@@ -45,29 +53,23 @@ func setupApp() *fiber.App {
 	app.Use(recover.New())
 	app.Use(logger.New())
 
+	// healthcheck api
 	app.Get(healthcheck.DefaultLivenessEndpoint, healthcheck.NewHealthChecker())
 	app.Get(healthcheck.DefaultReadinessEndpoint, healthcheck.NewHealthChecker(healthcheck.Config{Probe: func(ctx fiber.Ctx) bool {
 		return true
 	}}))
 
-	app.Get("/", func(ctx fiber.Ctx) error {
-		_, err := ctx.WriteString("Hello World")
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	usersStorage := users.NewSqliteUsersStorage(db)
 
-	app.Get("/501", func(ctx fiber.Ctx) error {
-		return fiber.ErrNotImplemented
-	})
+	// users api
+	users.SetupRoutes(app, usersStorage)
 
 	app.Use(utils.Json404)
 
 	return app
 }
 
-func startWithGracefulShutdown(app *fiber.App, config config.AppConfig) {
+func startWithGracefulShutdown(app *fiber.App, db *sql.DB, config config.AppConfig) {
 	address := config.Address()
 	fiberConfig := fiber.ListenConfig{EnablePrefork: config.IsProd()}
 
@@ -84,5 +86,8 @@ func startWithGracefulShutdown(app *fiber.App, config config.AppConfig) {
 	log.Println("Server shutdown...")
 	_ = app.ShutdownWithTimeout(shutdownTimeout)
 
-	// run db.close() etc.
+	err := db.Close()
+	if err != nil {
+		log.Panic(err)
+	}
 }

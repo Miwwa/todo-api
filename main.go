@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 	"todo-api/config"
+	"todo-api/utils"
 )
 
 const (
@@ -32,11 +33,16 @@ func setupApp() *fiber.App {
 		IdleTimeout:  idleTimeout,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
+		ErrorHandler: utils.JsonErrorHandler,
 	})
 
 	app.Use(recover.New())
 	app.Use(logger.New())
-	app.Use(healthcheck.NewHealthChecker())
+
+	app.Get(healthcheck.DefaultLivenessEndpoint, healthcheck.NewHealthChecker())
+	app.Get(healthcheck.DefaultReadinessEndpoint, healthcheck.NewHealthChecker(healthcheck.Config{Probe: func(ctx fiber.Ctx) bool {
+		return true
+	}}))
 
 	app.Get("/", func(ctx fiber.Ctx) error {
 		_, err := ctx.WriteString("Hello World")
@@ -50,12 +56,7 @@ func setupApp() *fiber.App {
 		return fiber.ErrNotImplemented
 	})
 
-	app.Use(func(ctx fiber.Ctx) error {
-		ctx.Status(404)
-		return ctx.JSON(fiber.Map{
-			"error": "404 Not Found",
-		})
-	})
+	app.Use(utils.Json404)
 
 	return app
 }

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"todo-api/config"
 )
 
 const (
@@ -17,27 +18,10 @@ const (
 )
 
 func main() {
+	appConfig := config.Default()
+
 	app := setupApp()
-
-	sigChannel := make(chan os.Signal, 1)
-	signal.Notify(sigChannel, syscall.SIGINT, syscall.SIGTERM)
-
-	var serverShutdown sync.WaitGroup
-
-	go func() {
-		_ = <-sigChannel
-		serverShutdown.Add(1)
-		defer serverShutdown.Done()
-		_ = app.ShutdownWithTimeout(shutdownTimeout)
-	}()
-
-	// todo: get port from env
-	log.Println("Server starting...")
-	if err := app.Listen(":3000", fiber.ListenConfig{EnablePrefork: false}); err != nil {
-		log.Panic(err)
-	}
-	serverShutdown.Wait()
-	log.Println("Server shutdown...")
+	startWithGracefulShutdown(app, appConfig)
 }
 
 func setupApp() *fiber.App {
@@ -57,30 +41,27 @@ func setupApp() *fiber.App {
 	return app
 }
 
-/*
-func startWithGracefulShutdown(app *fiber.App) {
+func startWithGracefulShutdown(app *fiber.App, config config.AppConfig) {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, syscall.SIGINT, syscall.SIGTERM)
 
+	var serverShutdown sync.WaitGroup
+
 	go func() {
-		err := server.ListenAndServe()
-		if err != nil {
-			if !errors.Is(err, http.ErrServerClosed) {
-				log.Fatalf("Http server error: %v", err)
-			}
-		}
-		log.Println("Stopped serving new connections.")
+		_ = <-sigChannel
+		serverShutdown.Add(1)
+		defer serverShutdown.Done()
+		_ = app.ShutdownWithTimeout(shutdownTimeout)
 	}()
-	log.Print("Server Started")
 
-	<-sigChannel
+	log.Println("Server starting...")
 
-	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer shutdownRelease()
-
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("HTTP shutdown error: %v", err)
+	address := config.Address()
+	fiberConfig := fiber.ListenConfig{EnablePrefork: config.IsProd()}
+	if err := app.Listen(address, fiberConfig); err != nil {
+		log.Panic(err)
 	}
-	log.Println("Graceful shutdown complete.")
+	serverShutdown.Wait()
+
+	log.Println("Server shutdown...")
 }
-*/

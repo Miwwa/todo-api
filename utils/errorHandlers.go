@@ -28,6 +28,7 @@ func JsonErrorHandler(ctx fiber.Ctx, err error) error {
 		"message": err.Error(),
 		"status":  code,
 	})
+	// Send error in plaintext as fallback
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).SendString(fmt.Sprintf("Internal Server Error: %s", err.Error()))
 	}

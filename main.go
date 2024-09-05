@@ -1,43 +1,64 @@
 package main
 
 import (
-	"context"
-	"errors"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/logger"
+	recover2 "github.com/gofiber/fiber/v3/middleware/recover"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
 
 const (
 	shutdownTimeout = 5 * time.Second
-	readTimeout     = 5 * time.Second
-	writeTimeout    = 10 * time.Second
-	idleTimeout     = 120 * time.Second
 )
 
 func main() {
-	router := chi.NewRouter()
-	router.Use(middleware.Logger)
-	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte("welcome"))
+	app := setupApp()
+
+	sigChannel := make(chan os.Signal, 1)
+	signal.Notify(sigChannel, syscall.SIGINT, syscall.SIGTERM)
+
+	var serverShutdown sync.WaitGroup
+
+	go func() {
+		_ = <-sigChannel
+		serverShutdown.Add(1)
+		defer serverShutdown.Done()
+		_ = app.ShutdownWithTimeout(shutdownTimeout)
+	}()
+
+	// todo: get port from env
+	log.Println("Server starting...")
+	if err := app.Listen(":3000", fiber.ListenConfig{EnablePrefork: false}); err != nil {
+		log.Panic(err)
+	}
+	serverShutdown.Wait()
+	log.Println("Server shutdown...")
+}
+
+func setupApp() *fiber.App {
+	app := fiber.New(fiber.Config{})
+
+	app.Use(recover2.New())
+	app.Use(logger.New())
+
+	app.Get("/", func(ctx fiber.Ctx) error {
+		_, err := ctx.WriteString("Hello World")
 		if err != nil {
-			return
+			return err
 		}
+		return nil
 	})
 
-	server := &http.Server{
-		Addr:         ":3000",
-		Handler:      router,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		IdleTimeout:  idleTimeout,
-	}
+	return app
+}
 
+/*
+func startWithGracefulShutdown(app *fiber.App) {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, syscall.SIGINT, syscall.SIGTERM)
 
@@ -62,3 +83,4 @@ func main() {
 	}
 	log.Println("Graceful shutdown complete.")
 }
+*/

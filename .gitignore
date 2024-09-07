@@ -8,10 +8,6 @@
 /build/
 /bin/
 
-# Go dependency files
-/go.sum
-/go.mod
-
 # IDE related files and directories
 .idea/
 
@@ -32,7 +28,9 @@ Thumbs.db
 *.tmp
 *.swap
 
+# .env files
 .env
 .env.local
 
+# local sqlite database
 db.sqlite

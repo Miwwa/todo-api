@@ -4,17 +4,28 @@ import (
 	"errors"
 	"github.com/gofiber/fiber/v3"
 	"log"
+	"todo-api/config"
 	"todo-api/utils"
 )
 
-func SetupRoutes(app *fiber.App, storage UsersStorage) {
-	app.Post("/register", Register(storage))
-	app.Post("/login", Login(storage))
+func SetupRoutes(app *fiber.App, config *config.AppConfig, storage UsersStorage) {
+	app.Post("/register", Register(config, storage))
+	app.Post("/login", Login(config, storage))
 }
 
-func Register(storage UsersStorage) fiber.Handler {
+func Register(config *config.AppConfig, storage UsersStorage) fiber.Handler {
+	type RegistrationRequest struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Name     string `json:"name"`
+	}
+
+	type RegistrationResponse struct {
+		Token string `json:"token"`
+	}
+
 	return func(ctx fiber.Ctx) error {
-		data := RegistrationData{}
+		data := RegistrationRequest{}
 		err := ctx.Bind().Body(&data)
 		if err != nil {
 			return err
@@ -34,18 +45,27 @@ func Register(storage UsersStorage) fiber.Handler {
 			return fiber.ErrInternalServerError
 		}
 
-		err = ctx.JSON(user)
+		token, err := GetToken(user, config.JwtSecret())
 		if err != nil {
 			return err
 		}
 
-		return nil
+		return ctx.JSON(RegistrationResponse{Token: token})
 	}
 }
 
-func Login(storage UsersStorage) fiber.Handler {
+func Login(config *config.AppConfig, storage UsersStorage) fiber.Handler {
+	type LoginRequest struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	type LoginResponse struct {
+		Token string `json:"token"`
+	}
+
 	return func(ctx fiber.Ctx) error {
-		data := LoginData{}
+		data := LoginRequest{}
 		err := ctx.Bind().Body(&data)
 		if err != nil {
 			return err
@@ -67,11 +87,11 @@ func Login(storage UsersStorage) fiber.Handler {
 			return fiber.NewError(fiber.StatusBadRequest, "wrong email or password")
 		}
 
-		err = ctx.JSON(user)
+		token, err := GetToken(user, config.JwtSecret())
 		if err != nil {
 			return err
 		}
 
-		return nil
+		return ctx.JSON(LoginResponse{Token: token})
 	}
 }

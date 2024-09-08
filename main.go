@@ -31,6 +31,9 @@ func main() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 	appConfig := config.FromEnv()
+	if appConfig.IsProd() && appConfig.JwtSecret() == "" {
+		log.Fatal("JWT_SECRET environment variable is required in production mode")
+	}
 	log.Printf("config loaded:\n%s\n", appConfig.DebugString())
 
 	db, err := sql.Open("sqlite3", appConfig.DbConnectionString())
@@ -38,11 +41,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	app := setupApp(db)
+	app := setupApp(&appConfig, db)
 	startWithGracefulShutdown(app, db, appConfig)
 }
 
-func setupApp(db *sql.DB) *fiber.App {
+func setupApp(config *config.AppConfig, db *sql.DB) *fiber.App {
 	app := fiber.New(fiber.Config{
 		IdleTimeout:  idleTimeout,
 		ReadTimeout:  readTimeout,
@@ -62,7 +65,7 @@ func setupApp(db *sql.DB) *fiber.App {
 	usersStorage := users.NewSqliteUsersStorage(db)
 
 	// users api
-	users.SetupRoutes(app, usersStorage)
+	users.SetupRoutes(app, config, usersStorage)
 
 	app.Use(utils.Json404)
 

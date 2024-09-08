@@ -9,7 +9,8 @@ import (
 func Json404(ctx fiber.Ctx) error {
 	ctx.Status(404)
 	return ctx.JSON(fiber.Map{
-		"error": "404 Not Found",
+		"status":  fiber.StatusNotFound,
+		"message": "404 Not Found",
 	})
 }
 
@@ -25,8 +26,8 @@ func JsonErrorHandler(ctx fiber.Ctx, err error) error {
 
 	// Send error as json
 	err = ctx.Status(code).JSON(fiber.Map{
-		"message": err.Error(),
 		"status":  code,
+		"message": err.Error(),
 	})
 	// Send error in plaintext as fallback
 	if err != nil {
@@ -34,4 +35,21 @@ func JsonErrorHandler(ctx fiber.Ctx, err error) error {
 	}
 
 	return nil
+}
+
+func AuthErrorHandler(c fiber.Ctx, err error) error {
+	if err.Error() == "Missing or malformed JWT" {
+		c.Status(fiber.StatusBadRequest)
+		return c.JSON(fiber.Map{
+			"status":  fiber.StatusBadRequest,
+			"message": "Missing or malformed JWT",
+		})
+
+	} else {
+		c.Status(fiber.StatusUnauthorized)
+		return c.JSON(fiber.Map{
+			"status":  fiber.StatusUnauthorized,
+			"message": "Invalid or expired auth token",
+		})
+	}
 }

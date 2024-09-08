@@ -11,6 +11,7 @@ type AppConfig struct {
 	environment  string
 	isProd       bool
 	dbConnection string
+	jwtSecret    string
 }
 
 func Default() AppConfig {
@@ -45,6 +46,10 @@ func (c *AppConfig) DebugString() string {
 	return fmt.Sprintf("port:%d\nenvironment:%s\nisDev:%t\nisProd:%t", c.port, c.environment, c.IsDev(), c.IsProd())
 }
 
+func (c *AppConfig) JwtSecret() string {
+	return c.jwtSecret
+}
+
 func FromEnv() AppConfig {
 	port, err := strconv.Atoi(os.Getenv("PORT"))
 	if err != nil {
@@ -58,10 +63,13 @@ func FromEnv() AppConfig {
 		dbConnection = "./db.sqlite"
 	}
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+
 	return AppConfig{
 		port:         port,
 		environment:  env,
 		isProd:       env == "production",
 		dbConnection: dbConnection,
+		jwtSecret:    jwtSecret,
 	}
 }

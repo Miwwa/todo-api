@@ -27,6 +27,7 @@ Create a `.env` file in the root directory with the following content:
 ```env
 PORT=3000
 ENV=production
+JWT_SECRET=mySecret
 ```
 
 ## Usage

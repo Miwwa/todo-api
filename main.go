@@ -64,12 +64,10 @@ func setupApp(config *config.AppConfig, db *sql.DB) *fiber.App {
 
 	usersStorage := user.NewSqliteUsersStorage(db)
 
-	// user api
+	// user register and login api
 	user.SetupRoutes(app, config, usersStorage)
-	app.Get("/user", func(c fiber.Ctx) error {
-		user := c.Locals(user.ContextKey).(*user.User)
-		return c.JSON(user)
-	}, user.ValidateAndExtractTokenMiddleware(config.JwtSecret()))
+	// todo crud api
+	//todo.SetupRoutes(app, config, todoStorage)
 
 	app.Use(utils.Json404)
 

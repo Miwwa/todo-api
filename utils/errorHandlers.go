@@ -36,20 +36,3 @@ func JsonErrorHandler(ctx fiber.Ctx, err error) error {
 
 	return nil
 }
-
-func AuthErrorHandler(c fiber.Ctx, err error) error {
-	if err.Error() == "Missing or malformed JWT" {
-		c.Status(fiber.StatusBadRequest)
-		return c.JSON(fiber.Map{
-			"status":  fiber.StatusBadRequest,
-			"message": "Missing or malformed JWT",
-		})
-
-	} else {
-		c.Status(fiber.StatusUnauthorized)
-		return c.JSON(fiber.Map{
-			"status":  fiber.StatusUnauthorized,
-			"message": "Invalid or expired auth token",
-		})
-	}
-}

@@ -66,6 +66,10 @@ func setupApp(config *config.AppConfig, db *sql.DB) *fiber.App {
 
 	// users api
 	users.SetupRoutes(app, config, usersStorage)
+	app.Get("/user", func(c fiber.Ctx) error {
+		user := c.Locals(users.UserContextKey).(*users.User)
+		return c.JSON(user)
+	}, users.ValidateAndExtractTokenMiddleware(config.JwtSecret()))
 
 	app.Use(utils.Json404)
 

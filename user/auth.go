@@ -8,7 +8,7 @@ import (
 
 const (
 	tokenContextKey = "jwt"
-	ContextKey      = "user"
+	userContextKey  = "user"
 )
 
 var (
@@ -52,7 +52,7 @@ func successHandler(c fiber.Ctx) error {
 	}
 	// todo: validate user
 
-	c.Locals(ContextKey, &user)
+	c.Locals(userContextKey, &user)
 
 	return c.Next()
 }

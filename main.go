@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 	"todo-api/config"
+	"todo-api/todo"
 	"todo-api/user"
 	"todo-api/utils"
 )
@@ -63,11 +64,12 @@ func setupApp(config *config.AppConfig, db *sql.DB) *fiber.App {
 	}}))
 
 	usersStorage := user.NewSqliteUsersStorage(db)
+	todoStorage := todo.NewSqliteStorage(db)
 
 	// user register and login api
 	user.SetupRoutes(app, config, usersStorage)
-	// todo crud api
-	//todo.SetupRoutes(app, config, todoStorage)
+	//  crud api
+	todo.SetupRoutes(app, config, todoStorage)
 
 	app.Use(utils.Json404)
 

@@ -11,6 +11,6 @@ type User struct {
 	passwordHash string
 }
 
-func FromContext(c fiber.Ctx) User {
-	return c.Locals(userContextKey).(User)
+func FromContext(c fiber.Ctx) *User {
+	return c.Locals(userContextKey).(*User)
 }

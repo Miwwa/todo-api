@@ -46,7 +46,7 @@ func successHandler(c fiber.Ctx) error {
 	}
 
 	user := User{
-		Id:    claims["sub"].(Id),
+		Id:    Id(claims["sub"].(string)),
 		Email: claims["email"].(string),
 		Name:  claims["name"].(string),
 	}

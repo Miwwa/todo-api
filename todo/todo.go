@@ -23,7 +23,7 @@ func (t *Todo) Invalid() bool {
 type Storage interface {
 	Create(userId user.Id, title, description string) (Todo, error)
 	Get(userId user.Id, limit, offset uint) ([]Todo, error)
-	Update(id Id, title, description string) (Todo, error)
-	Delete(id Id) error
+	Update(userId user.Id, id Id, title, description string) (Todo, error)
+	Delete(userId user.Id, id Id) error
 	Count() (uint, error)
 }

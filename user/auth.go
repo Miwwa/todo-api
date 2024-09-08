@@ -1,4 +1,4 @@
-package users
+package user
 
 import (
 	"github.com/gofiber/fiber/v3"
@@ -8,7 +8,7 @@ import (
 
 const (
 	tokenContextKey = "jwt"
-	UserContextKey  = "user"
+	ContextKey      = "user"
 )
 
 var (
@@ -46,13 +46,13 @@ func successHandler(c fiber.Ctx) error {
 	}
 
 	user := User{
-		Id:    claims["sub"].(string),
+		Id:    claims["sub"].(Id),
 		Email: claims["email"].(string),
 		Name:  claims["name"].(string),
 	}
 	// todo: validate user
 
-	c.Locals(UserContextKey, &user)
+	c.Locals(ContextKey, &user)
 
 	return c.Next()
 }

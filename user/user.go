@@ -1,7 +1,9 @@
-package users
+package user
+
+type Id string
 
 type User struct {
-	Id           string `json:"id"`
+	Id           Id     `json:"id"`
 	Email        string `json:"email"`
 	Name         string `json:"name"`
 	passwordHash string

@@ -1,4 +1,4 @@
-package users
+package user
 
 import (
 	"errors"
@@ -8,12 +8,12 @@ import (
 	"todo-api/utils"
 )
 
-func SetupRoutes(app *fiber.App, config *config.AppConfig, storage UsersStorage) {
+func SetupRoutes(app *fiber.App, config *config.AppConfig, storage Storage) {
 	app.Post("/register", Register(config, storage))
 	app.Post("/login", Login(config, storage))
 }
 
-func Register(config *config.AppConfig, storage UsersStorage) fiber.Handler {
+func Register(config *config.AppConfig, storage Storage) fiber.Handler {
 	type RegistrationRequest struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -39,7 +39,7 @@ func Register(config *config.AppConfig, storage UsersStorage) fiber.Handler {
 
 		user, err := storage.Create(ctx.Context(), data.Email, passwordHash, data.Name)
 		if err != nil {
-			if errors.Is(err, UserAlreadyExists) {
+			if errors.Is(err, AlreadyExists) {
 				return fiber.NewError(fiber.StatusBadRequest, err.Error())
 			}
 			return fiber.ErrInternalServerError
@@ -54,7 +54,7 @@ func Register(config *config.AppConfig, storage UsersStorage) fiber.Handler {
 	}
 }
 
-func Login(config *config.AppConfig, storage UsersStorage) fiber.Handler {
+func Login(config *config.AppConfig, storage Storage) fiber.Handler {
 	type LoginRequest struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -73,7 +73,7 @@ func Login(config *config.AppConfig, storage UsersStorage) fiber.Handler {
 
 		user, err := storage.GetUserByEmail(ctx.Context(), data.Email)
 		if err != nil {
-			if errors.Is(err, UserNotFound) {
+			if errors.Is(err, NotFound) {
 				return fiber.NewError(fiber.StatusBadRequest, "wrong email or password")
 			}
 			return err

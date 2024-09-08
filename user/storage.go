@@ -1,4 +1,4 @@
-package users
+package user
 
 import (
 	"context"
@@ -9,18 +9,12 @@ import (
 	"strings"
 )
 
-type StorageError string
-
-func (s StorageError) Error() string {
-	return string(s)
-}
-
-const (
-	UserAlreadyExists StorageError = "user already exists"
-	UserNotFound      StorageError = "user not found"
+var (
+	AlreadyExists = errors.New("user already exists")
+	NotFound      = errors.New("user not found")
 )
 
-type UsersStorage interface {
+type Storage interface {
 	Create(ctx context.Context, email string, passwordHash string, name string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 }
@@ -56,7 +50,7 @@ func (s SqliteUsersStorage) Create(ctx context.Context, email string, passwordHa
 	}
 
 	return User{
-		Id:    userId,
+		Id:    Id(userId),
 		Email: email,
 		Name:  name,
 	}, nil
@@ -73,7 +67,7 @@ func (s SqliteUsersStorage) GetUserByEmail(ctx context.Context, email string) (U
 	err = stmt.QueryRowContext(ctx, email).Scan(&user.Id, &user.Email, &user.Name, &user.passwordHash)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return User{}, UserNotFound
+			return User{}, NotFound
 		}
 		return User{}, err
 	}
@@ -85,7 +79,7 @@ func mapError(err error) error {
 	var sqlErr sqlite3.Error
 	if errors.As(err, &sqlErr) {
 		if errors.Is(sqlErr.Code, sqlite3.ErrConstraint) && strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
-			return UserAlreadyExists
+			return AlreadyExists
 		}
 	}
 	return err

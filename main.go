@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 	"todo-api/config"
-	"todo-api/users"
+	"todo-api/user"
 	"todo-api/utils"
 )
 
@@ -62,14 +62,14 @@ func setupApp(config *config.AppConfig, db *sql.DB) *fiber.App {
 		return true
 	}}))
 
-	usersStorage := users.NewSqliteUsersStorage(db)
+	usersStorage := user.NewSqliteUsersStorage(db)
 
-	// users api
-	users.SetupRoutes(app, config, usersStorage)
+	// user api
+	user.SetupRoutes(app, config, usersStorage)
 	app.Get("/user", func(c fiber.Ctx) error {
-		user := c.Locals(users.UserContextKey).(*users.User)
+		user := c.Locals(user.ContextKey).(*user.User)
 		return c.JSON(user)
-	}, users.ValidateAndExtractTokenMiddleware(config.JwtSecret()))
+	}, user.ValidateAndExtractTokenMiddleware(config.JwtSecret()))
 
 	app.Use(utils.Json404)
 

@@ -37,7 +37,7 @@ func CreateHandler(storage Storage) fiber.Handler {
 			return fiber.ErrBadRequest
 		}
 
-		todo, err := storage.Create(u.Id, req.Title, req.Description)
+		todo, err := storage.Create(ctx.Context(), u.Id, req.Title, req.Description)
 		if err != nil {
 			return fiber.ErrInternalServerError
 		}
@@ -65,18 +65,21 @@ func ReadHandler(storage Storage) fiber.Handler {
 
 	return func(ctx fiber.Ctx) error {
 		u := user.FromContext(ctx)
-		req := ReadRequest{}
+		req := ReadRequest{
+			Page:  1,
+			Limit: 10,
+		}
 		err := ctx.Bind().Query(&req)
 		if err != nil {
 			return fiber.ErrBadRequest
 		}
 
-		todos, err := storage.Get(u.Id, req.Limit, (req.Page-1)*req.Limit)
+		todos, err := storage.GetByUserId(ctx.Context(), u.Id, req.Limit, (req.Page-1)*req.Limit)
 		if err != nil {
 			return fiber.ErrInternalServerError
 		}
 
-		total, err := storage.Count()
+		total, err := storage.Count(ctx.Context(), u.Id)
 		if err != nil {
 			return fiber.ErrInternalServerError
 		}
@@ -106,7 +109,6 @@ func UpdateHandler(storage Storage) fiber.Handler {
 	type UpdateResponse Dto
 
 	return func(ctx fiber.Ctx) error {
-		u := user.FromContext(ctx)
 		todoId := Id(ctx.Params("id", ""))
 		req := UpdateRequest{}
 		err := ctx.Bind().Body(&req)
@@ -114,9 +116,17 @@ func UpdateHandler(storage Storage) fiber.Handler {
 			return fiber.ErrBadRequest
 		}
 
-		todo, err := storage.Update(u.Id, todoId, req.Title, req.Description)
+		err = validatePermission(ctx, storage, todoId)
+		if err != nil {
+			return err
+		}
+
+		todo, err := storage.Update(ctx.Context(), todoId, req.Title, req.Description)
 		if err != nil {
 			return fiber.ErrInternalServerError
+		}
+		if todo.Invalid() {
+			return fiber.ErrForbidden
 		}
 
 		return ctx.JSON(UpdateResponse{
@@ -135,14 +145,30 @@ func DeleteHandler(storage Storage) fiber.Handler {
 	}
 
 	return func(ctx fiber.Ctx) error {
-		u := user.FromContext(ctx)
 		todoId := Id(ctx.Params("id", ""))
 
-		err := storage.Delete(u.Id, todoId)
+		err := validatePermission(ctx, storage, todoId)
+		if err != nil {
+			return err
+		}
+
+		err = storage.Delete(ctx.Context(), todoId)
 		if err != nil {
 			return fiber.ErrInternalServerError
 		}
 
 		return ctx.JSON(DeleteResponse{})
 	}
+}
+
+func validatePermission(ctx fiber.Ctx, storage Storage, todoId Id) error {
+	u := user.FromContext(ctx)
+	todo, err := storage.GetById(ctx.Context(), todoId)
+	if err != nil {
+		return fiber.ErrInternalServerError
+	}
+	if todo.UserId != u.Id {
+		return fiber.ErrForbidden
+	}
+	return nil
 }

@@ -7,7 +7,7 @@ import (
 )
 
 func SetupRoutes(app *fiber.App, config *config.AppConfig, storage Storage) {
-	todoGroup := app.Group("/todos", user.ValidateAndExtractTokenMiddleware(config.JwtSecret()))
+	todoGroup := app.Group("/todos", user.ValidateAndExtractTokenMiddleware(config.JwtSecret))
 	todoGroup.Post("/", CreateHandler(storage))
 	todoGroup.Get("/", ReadHandler(storage))
 	todoGroup.Put("/:id", UpdateHandler(storage))

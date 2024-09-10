@@ -45,7 +45,7 @@ func Register(config *config.AppConfig, storage Storage) fiber.Handler {
 			return fiber.ErrInternalServerError
 		}
 
-		token, err := GetToken(user, config.JwtSecret())
+		token, err := GetToken(user, config.JwtSecret)
 		if err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ func Login(config *config.AppConfig, storage Storage) fiber.Handler {
 			return fiber.NewError(fiber.StatusBadRequest, "wrong email or password")
 		}
 
-		token, err := GetToken(user, config.JwtSecret())
+		token, err := GetToken(user, config.JwtSecret)
 		if err != nil {
 			return err
 		}

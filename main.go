@@ -31,13 +31,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
-	appConfig := config.FromEnv()
-	if appConfig.IsProd() && appConfig.JwtSecret() == "" {
+	appConfig, err := config.FromEnv()
+	if err != nil {
+		log.Fatalf("Error loading env variables: %v", err)
+	}
+	if appConfig.IsProduction && appConfig.JwtSecret == "" {
 		log.Fatal("JWT_SECRET environment variable is required in production mode")
 	}
 	log.Printf("config loaded:\n%s\n", appConfig.DebugString())
 
-	db, err := sql.Open("sqlite3", appConfig.DbConnectionString())
+	db, err := sql.Open("sqlite3", appConfig.SqliteDbPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = db.Ping()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,7 +85,7 @@ func setupApp(config *config.AppConfig, db *sql.DB) *fiber.App {
 
 func startWithGracefulShutdown(app *fiber.App, db *sql.DB, config config.AppConfig) {
 	address := config.Address()
-	fiberConfig := fiber.ListenConfig{EnablePrefork: config.IsProd()}
+	fiberConfig := fiber.ListenConfig{EnablePrefork: config.IsProduction}
 
 	go func() {
 		if err := app.Listen(address, fiberConfig); err != nil {

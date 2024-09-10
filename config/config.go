@@ -2,74 +2,36 @@ package config
 
 import (
 	"fmt"
-	"os"
-	"strconv"
+	"github.com/caarlos0/env/v11"
 )
 
 type AppConfig struct {
-	port         int
-	environment  string
-	isProd       bool
-	dbConnection string
-	jwtSecret    string
-}
-
-func Default() AppConfig {
-	return AppConfig{
-		port:        3000,
-		environment: "development",
-		isProd:      true,
-	}
-}
-
-func (c *AppConfig) Port() int {
-	return c.port
-}
-
-func (c *AppConfig) Address() string {
-	return fmt.Sprintf(":%d", c.port)
+	IsProduction bool   `env:"IS_PRODUCTION" envDefault:"false"`
+	Port         int    `env:"PORT" envDefault:"3000"`
+	SqliteDbPath string `env:"SQLITE_DB_PATH" envDefault:"./db.sqlite"`
+	JwtSecret    string `env:"JWT_SECRET" envDefault:"mySecret"`
 }
 
 func (c *AppConfig) IsDev() bool {
-	return !c.isProd
+	return !c.IsProduction
 }
 
-func (c *AppConfig) IsProd() bool {
-	return c.isProd
-}
-
-func (c *AppConfig) DbConnectionString() string {
-	return c.dbConnection
+func (c *AppConfig) Address() string {
+	return fmt.Sprintf(":%d", c.Port)
 }
 
 func (c *AppConfig) DebugString() string {
-	return fmt.Sprintf("port:%d\nenvironment:%s\nisDev:%t\nisProd:%t", c.port, c.environment, c.IsDev(), c.IsProd())
+	return fmt.Sprintf("IsProduction: %v\nPort: %d\ndb: %s\n", c.IsProduction, c.Port, c.SqliteDbPath)
 }
 
-func (c *AppConfig) JwtSecret() string {
-	return c.jwtSecret
-}
-
-func FromEnv() AppConfig {
-	port, err := strconv.Atoi(os.Getenv("PORT"))
+func FromEnv() (AppConfig, error) {
+	config := AppConfig{}
+	err := env.ParseWithOptions(&config, env.Options{
+		RequiredIfNoDef: true,
+		Prefix:          "",
+	})
 	if err != nil {
-		port = 3000
+		return config, err
 	}
-
-	env := os.Getenv("ENV")
-
-	dbConnection := os.Getenv("DB_CONNECTION")
-	if dbConnection == "" {
-		dbConnection = "./db.sqlite"
-	}
-
-	jwtSecret := os.Getenv("JWT_SECRET")
-
-	return AppConfig{
-		port:         port,
-		environment:  env,
-		isProd:       env == "production",
-		dbConnection: dbConnection,
-		jwtSecret:    jwtSecret,
-	}
+	return config, nil
 }

@@ -25,8 +25,9 @@ Configuration for the application can be set via environment variables or a conf
 Create a `.env` file in the root directory with the following content:
 
 ```env
+IS_PRODUCTION=true
 PORT=3000
-ENV=production
+SQLITE_DB_PATH=./db.sqlite
 JWT_SECRET=mySecret
 ```
 

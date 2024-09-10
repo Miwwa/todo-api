@@ -35,8 +35,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading env variables: %v", err)
 	}
-	if appConfig.IsProduction && appConfig.JwtSecret == "" {
-		log.Fatal("JWT_SECRET environment variable is required in production mode")
+	err = appConfig.Validate()
+	if err != nil {
+		log.Fatalf("App config error: %v", err)
 	}
 	log.Printf("config loaded:\n%s\n", appConfig.DebugString())
 

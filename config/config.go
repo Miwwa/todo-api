@@ -1,8 +1,10 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"github.com/caarlos0/env/v11"
+	"os"
 )
 
 type AppConfig struct {
@@ -22,6 +24,22 @@ func (c *AppConfig) Address() string {
 
 func (c *AppConfig) DebugString() string {
 	return fmt.Sprintf("IsProduction: %v\nPort: %d\ndb: %s\n", c.IsProduction, c.Port, c.SqliteDbPath)
+}
+
+func (c *AppConfig) Validate() error {
+	if c.Port < 1 || c.Port > 65535 {
+		return errors.New("port must in range 1-65535")
+	}
+
+	if _, err := os.Stat(c.SqliteDbPath); os.IsNotExist(err) {
+		return fmt.Errorf("sqlite db path %s does not exist", c.SqliteDbPath)
+	}
+
+	if c.IsProduction && c.JwtSecret == "" {
+		return errors.New("jwt secret is required in production mode, set JWT_SECRET environment variable")
+	}
+
+	return nil
 }
 
 func FromEnv() (AppConfig, error) {

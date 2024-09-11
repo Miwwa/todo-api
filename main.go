@@ -78,7 +78,7 @@ func setupApp(config *config.AppConfig, db *sql.DB) *fiber.App {
 	// user register and login api
 	user.SetupRoutes(app, config, usersStorage, validator)
 	//  crud api
-	todo.SetupRoutes(app, config, todoStorage)
+	todo.SetupRoutes(app, config, todoStorage, validator)
 
 	app.Use(utils.Json404)
 

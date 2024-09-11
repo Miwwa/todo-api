@@ -4,29 +4,30 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"todo-api/config"
 	"todo-api/user"
+	"todo-api/utils"
 )
 
-func SetupRoutes(app *fiber.App, config *config.AppConfig, storage Storage) {
+func SetupRoutes(app *fiber.App, config *config.AppConfig, storage Storage, validator *utils.AppValidator) {
 	todoGroup := app.Group("/todos", user.ValidateAndExtractTokenMiddleware(config.JwtSecret))
-	todoGroup.Post("/", CreateHandler(storage))
-	todoGroup.Get("/", ReadHandler(storage))
-	todoGroup.Put("/:id", UpdateHandler(storage))
+	todoGroup.Post("/", CreateHandler(storage, validator))
+	todoGroup.Get("/", ReadHandler(storage, validator))
+	todoGroup.Put("/:id", UpdateHandler(storage, validator))
 	todoGroup.Delete("/:id", DeleteHandler(storage))
 }
 
-type Dto struct {
+type dto struct {
 	Id          Id     `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
-func CreateHandler(storage Storage) fiber.Handler {
+func CreateHandler(storage Storage, validator *utils.AppValidator) fiber.Handler {
 	type CreateRequest struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
+		Title       string `json:"title" validate:"required,gte=0,lte=255"`
+		Description string `json:"description" validate:"lte=100000"`
 	}
 
-	type CreateResponse Dto
+	type CreateResponse dto
 
 	return func(ctx fiber.Ctx) error {
 		u := user.FromContext(ctx)
@@ -35,6 +36,9 @@ func CreateHandler(storage Storage) fiber.Handler {
 		err := ctx.Bind().Body(&req)
 		if err != nil {
 			return fiber.ErrBadRequest
+		}
+		if err = validator.Validate(req); err != nil {
+			return err
 		}
 
 		todo, err := storage.Create(ctx.Context(), u.Id, req.Title, req.Description)
@@ -50,14 +54,14 @@ func CreateHandler(storage Storage) fiber.Handler {
 	}
 }
 
-func ReadHandler(storage Storage) fiber.Handler {
+func ReadHandler(storage Storage, validator *utils.AppValidator) fiber.Handler {
 	type ReadRequest struct {
-		Page  uint `json:"page"`
-		Limit uint `json:"limit"`
+		Page  uint `json:"page" validate:"gt=0"`
+		Limit uint `json:"limit" validate:"gt=0"`
 	}
 
 	type ReadResponse struct {
-		Data  []Dto
+		Data  []dto
 		Page  uint `json:"page"`
 		Limit uint `json:"limit"`
 		Total uint `json:"total"`
@@ -73,6 +77,9 @@ func ReadHandler(storage Storage) fiber.Handler {
 		if err != nil {
 			return fiber.ErrBadRequest
 		}
+		if err = validator.Validate(req); err != nil {
+			return err
+		}
 
 		todos, err := storage.GetByUserId(ctx.Context(), u.Id, req.Limit, (req.Page-1)*req.Limit)
 		if err != nil {
@@ -85,14 +92,14 @@ func ReadHandler(storage Storage) fiber.Handler {
 		}
 
 		response := ReadResponse{
-			Data:  make([]Dto, len(todos)),
+			Data:  make([]dto, len(todos)),
 			Page:  req.Page,
 			Limit: req.Limit,
 			Total: total,
 		}
 
 		for i, todo := range todos {
-			response.Data[i] = Dto{
+			response.Data[i] = dto{
 				Id:          todo.Id,
 				Title:       todo.Title,
 				Description: todo.Description,
@@ -103,25 +110,32 @@ func ReadHandler(storage Storage) fiber.Handler {
 	}
 }
 
-func UpdateHandler(storage Storage) fiber.Handler {
-	type UpdateRequest Dto
+func UpdateHandler(storage Storage, validator *utils.AppValidator) fiber.Handler {
+	type UpdateRequest struct {
+		Id          Id     `json:"id" validate:"required"`
+		Title       string `json:"title" validate:"required,gte=0,lte=255"`
+		Description string `json:"description" validate:"lte=100000"`
+	}
 
-	type UpdateResponse Dto
+	type UpdateResponse dto
 
 	return func(ctx fiber.Ctx) error {
-		todoId := Id(ctx.Params("id", ""))
 		req := UpdateRequest{}
+		req.Id = Id(ctx.Params("id", ""))
 		err := ctx.Bind().Body(&req)
 		if err != nil {
 			return fiber.ErrBadRequest
 		}
+		if err = validator.Validate(req); err != nil {
+			return err
+		}
 
-		err = validatePermission(ctx, storage, todoId)
+		err = validatePermission(ctx, storage, req.Id)
 		if err != nil {
 			return err
 		}
 
-		todo, err := storage.Update(ctx.Context(), todoId, req.Title, req.Description)
+		todo, err := storage.Update(ctx.Context(), req.Id, req.Title, req.Description)
 		if err != nil {
 			return fiber.ErrInternalServerError
 		}

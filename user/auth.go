@@ -50,7 +50,6 @@ func successHandler(c fiber.Ctx) error {
 		Email: claims["email"].(string),
 		Name:  claims["name"].(string),
 	}
-	// todo: validate user
 
 	c.Locals(userContextKey, &user)
 

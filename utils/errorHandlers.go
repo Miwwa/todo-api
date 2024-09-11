@@ -18,6 +18,12 @@ func JsonErrorHandler(ctx fiber.Ctx, err error) error {
 	// Status code defaults to 500
 	code := fiber.StatusInternalServerError
 
+	var v ValidationErrorResponse
+	if errors.As(err, &v) {
+		ctx.Status(v.Status)
+		return ctx.JSON(v)
+	}
+
 	// Retrieve the custom status code if it's a *fiber.Error
 	var e *fiber.Error
 	if errors.As(err, &e) {

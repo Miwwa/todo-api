@@ -71,11 +71,12 @@ func setupApp(config *config.AppConfig, db *sql.DB) *fiber.App {
 		return true
 	}}))
 
+	validator := utils.NewValidator()
 	usersStorage := user.NewSqliteUsersStorage(db)
 	todoStorage := todo.NewSqliteStorage(db)
 
 	// user register and login api
-	user.SetupRoutes(app, config, usersStorage)
+	user.SetupRoutes(app, config, usersStorage, validator)
 	//  crud api
 	todo.SetupRoutes(app, config, todoStorage)
 

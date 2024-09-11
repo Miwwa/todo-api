@@ -8,16 +8,16 @@ import (
 	"todo-api/utils"
 )
 
-func SetupRoutes(app *fiber.App, config *config.AppConfig, storage Storage) {
-	app.Post("/register", Register(config, storage))
-	app.Post("/login", Login(config, storage))
+func SetupRoutes(app *fiber.App, config *config.AppConfig, storage Storage, validator *utils.AppValidator) {
+	app.Post("/register", Register(config, storage, validator))
+	app.Post("/login", Login(config, storage, validator))
 }
 
-func Register(config *config.AppConfig, storage Storage) fiber.Handler {
+func Register(config *config.AppConfig, storage Storage, validator *utils.AppValidator) fiber.Handler {
 	type RegistrationRequest struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		Name     string `json:"name"`
+		Email    string `json:"email" validate:"required,email"`
+		Password string `json:"password" validate:"required,gte=4,lte=255"`
+		Name     string `json:"name" validate:"required,gte=2,lte=255"`
 	}
 
 	type RegistrationResponse struct {
@@ -27,6 +27,10 @@ func Register(config *config.AppConfig, storage Storage) fiber.Handler {
 	return func(ctx fiber.Ctx) error {
 		data := RegistrationRequest{}
 		err := ctx.Bind().Body(&data)
+		if err != nil {
+			return err
+		}
+		err = validator.Validate(data)
 		if err != nil {
 			return err
 		}
@@ -54,10 +58,10 @@ func Register(config *config.AppConfig, storage Storage) fiber.Handler {
 	}
 }
 
-func Login(config *config.AppConfig, storage Storage) fiber.Handler {
+func Login(config *config.AppConfig, storage Storage, validator *utils.AppValidator) fiber.Handler {
 	type LoginRequest struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email    string `json:"email" validate:"required,email"`
+		Password string `json:"password" validate:"required,gte=4,lte=255"`
 	}
 
 	type LoginResponse struct {
@@ -67,6 +71,10 @@ func Login(config *config.AppConfig, storage Storage) fiber.Handler {
 	return func(ctx fiber.Ctx) error {
 		data := LoginRequest{}
 		err := ctx.Bind().Body(&data)
+		if err != nil {
+			return err
+		}
+		err = validator.Validate(data)
 		if err != nil {
 			return err
 		}

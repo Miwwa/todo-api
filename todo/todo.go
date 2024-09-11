@@ -44,8 +44,9 @@ const (
 )
 
 type FindOptions struct {
-	Limit, Offset     uint
-	SortBy, SortOrder string
+	Limit, Offset      uint
+	SortBy, SortOrder  string
+	Title, Description string
 }
 
 func (f *FindOptions) Validate() error {
@@ -127,19 +128,37 @@ func (s SqliteStorage) GetByUserId(ctx context.Context, userId user.Id, options 
 		return nil, err
 	}
 
+	whereTitle := ""
+	whereDescription := ""
+	if options.Title != "" {
+		whereTitle += " AND title LIKE ?"
+	}
+	if options.Description != "" {
+		whereDescription += " AND description LIKE ?"
+	}
+
 	stmt, err := s.db.PrepareContext(ctx, fmt.Sprintf(`
 		SELECT id, user_id, title, description, created_at, updated_at
-		FROM todos WHERE user_id=?
+		FROM todos WHERE user_id=? %s %s
 		ORDER BY %s %s
 		LIMIT ?
 		OFFSET ?
-	`, options.SortBy, options.SortOrder))
+	`, whereTitle, whereDescription, options.SortBy, options.SortOrder))
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.QueryContext(ctx, userId, options.Limit, options.Offset)
+	args := []any{userId}
+	if options.Title != "" {
+		args = append(args, options.Title)
+	}
+	if options.Description != "" {
+		args = append(args, options.Description)
+	}
+	args = append(args, options.Limit, options.Offset)
+
+	rows, err := stmt.QueryContext(ctx, args...)
 	if err != nil {
 		return nil, err
 	}

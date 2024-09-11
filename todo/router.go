@@ -56,10 +56,12 @@ func CreateHandler(storage Storage, validator *utils.AppValidator) fiber.Handler
 
 func ReadHandler(storage Storage, validator *utils.AppValidator) fiber.Handler {
 	type ReadRequest struct {
-		Page      uint   `query:"page" validate:"gt=0"`
-		Limit     uint   `query:"limit" validate:"gt=0"`
-		SortBy    string `query:"sort_by" validate:"oneof=id title description"`
-		SortOrder string `query:"sort_order" validate:"oneof=asc desc"`
+		Page        uint   `query:"page" validate:"gt=0"`
+		Limit       uint   `query:"limit" validate:"gt=0"`
+		SortBy      string `query:"sort_by" validate:"oneof=id title description"`
+		SortOrder   string `query:"sort_order" validate:"oneof=asc desc"`
+		Title       string `query:"title"`
+		Description string `query:"description"`
 	}
 
 	type ReadResponse struct {
@@ -86,10 +88,12 @@ func ReadHandler(storage Storage, validator *utils.AppValidator) fiber.Handler {
 		}
 
 		options := FindOptions{
-			Limit:     req.Limit,
-			Offset:    (req.Page - 1) * req.Limit,
-			SortBy:    req.SortBy,
-			SortOrder: req.SortOrder,
+			Limit:       req.Limit,
+			Offset:      (req.Page - 1) * req.Limit,
+			SortBy:      req.SortBy,
+			SortOrder:   req.SortOrder,
+			Title:       req.Title,
+			Description: req.Description,
 		}
 		todos, err := storage.GetByUserId(ctx.Context(), u.Id, options)
 		if err != nil {

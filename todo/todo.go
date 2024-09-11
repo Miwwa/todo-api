@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/oklog/ulid/v2"
 	"time"
 	"todo-api/user"
@@ -27,10 +28,40 @@ func (t *Todo) Invalid() bool {
 type Storage interface {
 	Create(ctx context.Context, userId user.Id, title, description string) (Todo, error)
 	GetById(ctx context.Context, id Id) (Todo, error)
-	GetByUserId(ctx context.Context, userId user.Id, limit, offset uint) ([]Todo, error)
+	GetByUserId(ctx context.Context, userId user.Id, options FindOptions) ([]Todo, error)
 	Update(ctx context.Context, id Id, title, description string) (Todo, error)
 	Delete(ctx context.Context, id Id) error
 	Count(ctx context.Context, userId user.Id) (uint, error)
+}
+
+const (
+	IdName          = "id"
+	TitleName       = "title"
+	DescriptionName = "description"
+
+	SortAscending  = "asc"
+	SortDescending = "desc"
+)
+
+type FindOptions struct {
+	Limit, Offset     uint
+	SortBy, SortOrder string
+}
+
+func (f *FindOptions) Validate() error {
+	if f.Limit < 0 {
+		return errors.New("limit cannot be negative")
+	}
+	if f.Offset < 0 {
+		return errors.New("offset cannot be negative")
+	}
+	if f.SortOrder != SortAscending && f.SortOrder != SortDescending {
+		return errors.New("invalid sort order")
+	}
+	if f.SortBy != IdName && f.SortBy != TitleName && f.SortBy != DescriptionName {
+		return errors.New("invalid sort field")
+	}
+	return nil
 }
 
 type SqliteStorage struct {
@@ -91,20 +122,24 @@ func (s SqliteStorage) GetById(ctx context.Context, id Id) (Todo, error) {
 	return todo, nil
 }
 
-func (s SqliteStorage) GetByUserId(ctx context.Context, userId user.Id, limit, offset uint) ([]Todo, error) {
-	stmt, err := s.db.PrepareContext(ctx, `
+func (s SqliteStorage) GetByUserId(ctx context.Context, userId user.Id, options FindOptions) ([]Todo, error) {
+	if err := options.Validate(); err != nil {
+		return nil, err
+	}
+
+	stmt, err := s.db.PrepareContext(ctx, fmt.Sprintf(`
 		SELECT id, user_id, title, description, created_at, updated_at
 		FROM todos WHERE user_id=?
-		ORDER BY created_at
+		ORDER BY %s %s
 		LIMIT ?
 		OFFSET ?
-	`)
+	`, options.SortBy, options.SortOrder))
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.QueryContext(ctx, userId, limit, offset)
+	rows, err := stmt.QueryContext(ctx, userId, options.Limit, options.Offset)
 	if err != nil {
 		return nil, err
 	}
